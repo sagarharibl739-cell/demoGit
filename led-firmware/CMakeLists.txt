@@ -9,6 +9,7 @@ add_executable(led_test
     tests/led_test.c
     src/led.c
 )
+set_target_properties(led_test PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 target_include_directories(led_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
