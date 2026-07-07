@@ -1,5 +1,6 @@
+# Agent linux-agent
 pipeline {
-    agent any
+    agent { label 'linux-agent' }
     environment {
         BUILD_DIR="build"
     }
