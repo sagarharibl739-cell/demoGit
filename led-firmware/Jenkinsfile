@@ -38,6 +38,19 @@ pipeline {
             }
         }
 
+        stage('Unit Tests') {
+            steps {
+                dir("${env.WORKSPACE}/${env.PROJECT_DIR}") {
+                    sh '''
+                    set -e
+                    mkdir -p "${BUILD_DIR}"
+                    cc -std=c99 -Wall -Wextra -Iinclude tests/led_test.c -o "${BUILD_DIR}/led_test"
+                    "${BUILD_DIR}/led_test"
+                    '''
+                }
+            }
+        }
+
         stage('Configure') {
             steps {
                 dir("${env.WORKSPACE}/${env.PROJECT_DIR}") {

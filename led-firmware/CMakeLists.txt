@@ -5,6 +5,12 @@ set(CMAKE_C_STANDARD 11)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
+add_executable(led_test
+    tests/led_test.c
+)
+
+target_include_directories(led_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_executable(firmware.elf
