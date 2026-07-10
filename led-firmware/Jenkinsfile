@@ -5,15 +5,20 @@ library identifier: 'shared_library@main', retriever: modernSCM(
 )
 
 pipeline {
+
     agent { label 'linux-node' }
+
     options {
         timestamps()
     }
+
     environment {
         BUILD_DIR = 'build'
         PROJECT_DIR = 'led-firmware'
     }
+
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -29,25 +34,36 @@ pipeline {
             }
         }
 
-        stage('Lint') {
-            steps {
-                script {
-                    echo 'Using shared library: runClangFormat()'
-                    runClangFormat(env.PROJECT_DIR, env.BUILD_DIR)
-                }
-            }
-        }
+        stage('Parallel Validation') {
+            parallel {
 
-        stage('Unit Tests') {
-            steps {
-                dir("${env.WORKSPACE}/${env.PROJECT_DIR}") {
-                    sh '''
-                    set -e
-                    mkdir -p "${BUILD_DIR}"
-                    cc -std=c99 -Wall -Wextra -Iinclude tests/led_test.c src/led.c -o "${BUILD_DIR}/led_test"
-                    "${BUILD_DIR}/led_test"
-                    '''
+                stage('Lint') {
+                    steps {
+                        script {
+                            echo 'Using shared library: runClangFormat()'
+                            runClangFormat(env.PROJECT_DIR, env.BUILD_DIR)
+                        }
+                    }
                 }
+
+                stage('Unit Tests') {
+                    steps {
+                        dir("${env.WORKSPACE}/${env.PROJECT_DIR}") {
+                            sh '''
+                                set -e
+                                mkdir -p "${BUILD_DIR}"
+                                cc -std=c99 -Wall -Wextra \
+                                   -Iinclude \
+                                   tests/led_test.c \
+                                   src/led.c \
+                                   -o "${BUILD_DIR}/led_test"
+
+                                "${BUILD_DIR}/led_test"
+                            '''
+                        }
+                    }
+                }
+
             }
         }
 
@@ -55,10 +71,10 @@ pipeline {
             steps {
                 dir("${env.WORKSPACE}/${env.PROJECT_DIR}") {
                     sh '''
-                    set -e
-                    mkdir -p "${BUILD_DIR}"
-                    cd "${BUILD_DIR}"
-                    cmake .. -DCMAKE_TOOLCHAIN_FILE=../arm-gcc-toolchain.cmake
+                        set -e
+                        mkdir -p "${BUILD_DIR}"
+                        cd "${BUILD_DIR}"
+                        cmake .. -DCMAKE_TOOLCHAIN_FILE=../arm-gcc-toolchain.cmake
                     '''
                 }
             }
@@ -73,27 +89,42 @@ pipeline {
             }
         }
 
-        stage('Verify Artifacts') {
-            steps {
-                sh 'ls -lh ${PROJECT_DIR}/${BUILD_DIR} || true'
-            }
-        }
+        stage('Parallel Post Build') {
+            parallel {
 
-        stage('Archive') {
-            steps {
-                archiveArtifacts artifacts: "${env.PROJECT_DIR}/${env.BUILD_DIR}/*.elf,${env.PROJECT_DIR}/${env.BUILD_DIR}/*.hex,${env.PROJECT_DIR}/${env.BUILD_DIR}/*.bin,${env.PROJECT_DIR}/${env.BUILD_DIR}/clang-format-report.txt", allowEmptyArchive: true
+                stage('Verify Artifacts') {
+                    steps {
+                        sh 'ls -lh ${PROJECT_DIR}/${BUILD_DIR} || true'
+                    }
+                }
+
+                stage('Archive') {
+                    steps {
+                        archiveArtifacts artifacts: "${env.PROJECT_DIR}/${env.BUILD_DIR}/*.elf,${env.PROJECT_DIR}/${env.BUILD_DIR}/*.hex,${env.PROJECT_DIR}/${env.BUILD_DIR}/*.bin,${env.PROJECT_DIR}/${env.BUILD_DIR}/clang-format-report.txt", allowEmptyArchive: true
+                    }
+                }
+
             }
         }
     }
+
     post {
         always {
             echo 'Post-build: archiving clang-format report and printing summary'
-            archiveArtifacts artifacts: "${env.PROJECT_DIR}/${env.BUILD_DIR}/clang-format-report.txt", allowEmptyArchive: true
-            sh 'echo "--- clang-format report (post) ---"; cat ${PROJECT_DIR}/${BUILD_DIR}/clang-format-report.txt || true'
+
+            archiveArtifacts artifacts: "${env.PROJECT_DIR}/${env.BUILD_DIR}/clang-format-report.txt",
+                             allowEmptyArchive: true
+
+            sh '''
+                echo "------ Clang Format Report ------"
+                cat ${PROJECT_DIR}/${BUILD_DIR}/clang-format-report.txt || true
+            '''
         }
+
         success {
             echo 'Build succeeded.'
         }
+
         failure {
             echo 'Build failed.'
         }
