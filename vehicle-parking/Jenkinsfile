@@ -65,22 +65,12 @@ pipeline {
         }
 
         stage('Archive') {
-            parallel {
-
-                stage('Archive JAR') {
-                    steps {
-                        archiveArtifacts artifacts: 'vehicle-parking/target/*.jar'
-                    }
-                }
-
-                stage('Archive Reports') {
-                    steps {
-                        archiveArtifacts artifacts: 'vehicle-parking/target/surefire-reports/**',
-                                         allowEmptyArchive: true
-                    }
-                }
+            steps {
+                archiveArtifacts artifacts: 'vehicle-parking/target/*.jar'
+                archiveArtifacts artifacts: 'vehicle-parking/target/surefire-reports/**', allowEmptyArchive: true
             }
         }
+        
     }
 
     post {
@@ -102,4 +92,4 @@ pipeline {
             echo "Build FAILED"
         }
     }
-}
+}  
