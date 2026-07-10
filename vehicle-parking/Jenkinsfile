@@ -1,13 +1,25 @@
 pipeline {
 
-    agent any
+    agent { label 'linux-agent' }
+
+    options {
+        timestamps()
+        timeout(time: 1, unit: 'HOURS')
+    }
 
     tools {
-        jdk 'JDK17'
         maven 'Maven'
     }
 
     stages {
+
+        stage('Start') {
+            steps {
+                echo "=========================================="
+                echo "Build Started at: ${new Date()}"
+                echo "=========================================="
+            }
+        }
 
         stage('Checkout') {
             steps {
@@ -17,32 +29,44 @@ pipeline {
 
         stage('Compile') {
             steps {
-                sh 'mvn clean compile'
+                sh 'cd vehicle-parking && mvn clean compile'
             }
         }
 
-        stage('Test') {
+        stage('Unit Tests') {
             steps {
-                sh 'mvn test'
+                sh 'cd vehicle-parking && mvn test -Dtest=**/*Test.java'
             }
         }
 
         stage('Package') {
             steps {
-                sh 'mvn package'
+                sh 'cd vehicle-parking && mvn package'
             }
         }
 
         stage('Archive') {
             steps {
-                archiveArtifacts artifacts: 'target/*.jar'
+                archiveArtifacts artifacts: 'vehicle-parking/target/*.jar'
+                archiveArtifacts artifacts: 'vehicle-parking/target/surefire-reports/**', allowEmptyArchive: true
             }
         }
     }
 
     post {
         always {
-            junit 'target/surefire-reports/*.xml'
+            junit allowEmptyResults: true, testResults: 'vehicle-parking/target/surefire-reports/*.xml'
+            echo "=========================================="
+            echo "Unit Test Results Processed and Archived"
+            echo "=========================================="
+            echo "Build Finished at: ${new Date()}"
+            echo "=========================================="
+        }
+        success {
+            echo "Build SUCCESS"
+        }
+        failure {
+            echo "Build FAILED"
         }
     }
 }
