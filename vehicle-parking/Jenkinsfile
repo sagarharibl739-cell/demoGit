@@ -29,38 +29,19 @@ pipeline {
 
         stage('Compile') {
             steps {
-                dir('vehicle-parking') {
-                    sh 'mvn clean compile'
-                }
+                sh 'cd vehicle-parking && mvn clean compile'
             }
         }
 
-        stage('Parallel Validation') {
-            parallel {
-
-                stage('Unit Tests') {
-                    steps {
-                        dir('vehicle-parking') {
-                            sh 'mvn test -Dtest=**/*Test.java'
-                        }
-                    }
-                }
-
-                stage('Static Code Analysis') {
-                    steps {
-                        dir('vehicle-parking') {
-                            sh 'mvn checkstyle:check || true'
-                        }
-                    }
-                }
+        stage('Unit Tests') {
+            steps {
+                sh 'cd vehicle-parking && mvn test -Dtest=**/*Test.java'
             }
         }
 
         stage('Package') {
             steps {
-                dir('vehicle-parking') {
-                    sh 'mvn package'
-                }
+                sh 'cd vehicle-parking && mvn package'
             }
         }
 
@@ -70,26 +51,22 @@ pipeline {
                 archiveArtifacts artifacts: 'vehicle-parking/target/surefire-reports/**', allowEmptyArchive: true
             }
         }
-        
     }
 
     post {
         always {
-            junit allowEmptyResults: true,
-                  testResults: 'vehicle-parking/target/surefire-reports/*.xml'
-
+            junit allowEmptyResults: true, testResults: 'vehicle-parking/target/surefire-reports/*.xml'
             echo "=========================================="
-            echo "Unit Test Results Processed"
+            echo "Unit Test Results Processed and Archived"
+            echo "=========================================="
             echo "Build Finished at: ${new Date()}"
             echo "=========================================="
         }
-
         success {
             echo "Build SUCCESS"
         }
-
         failure {
             echo "Build FAILED"
         }
     }
-}  
+}
